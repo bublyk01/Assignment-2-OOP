@@ -189,6 +189,18 @@ int main() {
             shapes.clear();
             shapes_info.clear();
         }
+        else if (command == "undo") {
+            if (!shapes.empty()) {
+                delete shapes.back();
+                shapes.pop_back();
+                shapes_info.pop_back();
+
+                board.clear();
+                for (const auto& shape : shapes) {
+                    shape->draw(board, shapes_info[&shape - &shapes[0]].x, shapes_info[&shape - &shapes[0]].y);
+                }
+            }
+        }
     }
     for (auto& shape : shapes) {
         delete shape;
