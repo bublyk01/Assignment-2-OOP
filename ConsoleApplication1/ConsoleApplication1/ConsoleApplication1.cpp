@@ -5,7 +5,7 @@
 
 const int BOARD_WIDTH = 80;
 const int BOARD_HEIGHT = 80;
-const int FIGURE_SCALE = 2.0;
+const int FIGURE_SCALE = 2;
 
 struct Board {
     std::vector<std::vector<char>> grid;
@@ -54,6 +54,30 @@ struct Circle : public Shape {
     }
 };
 
+struct Square : public Shape {
+    int side_length;
+
+    Square(int side) : side_length(side) {}
+
+    void draw(Board& board, int X, int Y) override {
+        if (side_length <= 0) return;
+
+        for (int y = 0; y < side_length; ++y) {
+            float correctY = y / FIGURE_SCALE;
+
+            for (int x = 0; x < side_length; ++x) {
+                if (y == 0 || y == side_length - 1 || x == 0 || x == side_length - 1) {
+                    int drawnX = X + x;
+                    int drawnY = Y + static_cast<int>(correctY);
+                    if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
+                        board.grid[drawnY][drawnX] = '*';
+                    }
+                }
+            }
+        }
+    }
+};
+
 int main() {
     Board board;
     std::string command;
@@ -72,6 +96,14 @@ int main() {
 
             Circle circle(radius);
             circle.draw(board, x, y);
+        }
+        else if (command == "square") {
+            int x, y, side_length;
+            std::cout << "Enter the location of the square, and its side length: ";
+            std::cin >> x >> y >> side_length;
+
+            Square square(side_length);
+            square.draw(board, x, y);
         }
         else if (command == "exit") {
             break;
