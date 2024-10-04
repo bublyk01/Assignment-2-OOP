@@ -1,4 +1,4 @@
 ﻿  ConsoleApplication1.cpp
-C:\Users\Volodya\Desktop\Assignment-2-OOP\ConsoleApplication1\ConsoleApplication1\ConsoleApplication1.cpp(43,32): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\Volodya\Desktop\Assignment-2-OOP\ConsoleApplication1\ConsoleApplication1\ConsoleApplication1.cpp(66,28): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\Volodya\Desktop\Assignment-2-OOP\ConsoleApplication1\ConsoleApplication1\ConsoleApplication1.cpp(53,32): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\Volodya\Desktop\Assignment-2-OOP\ConsoleApplication1\ConsoleApplication1\ConsoleApplication1.cpp(76,28): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
   ConsoleApplication1.vcxproj -> C:\Users\Volodya\Desktop\Assignment-2-OOP\ConsoleApplication1\x64\Debug\ConsoleApplication1.exe

@@ -25,6 +25,16 @@ struct Board {
     }
 };
 
+struct Information {
+    int id;
+    std::string type;
+    int x, y;
+    int width, height;
+
+    Information(int id, std::string type, int x, int y, int dim1, int dim2 = 0)
+        : id(id), type(type), x(x), y(y), width(dim1), height(dim2) {}
+};
+
 struct Shape {
     virtual void draw(Board& board, int x, int y) = 0;
     virtual ~Shape() = default;
@@ -90,17 +100,17 @@ struct Triangle : public Shape {
             int right = x + i;
             int posY = y + i;
 
-            if (posY < 25) {
-                if (left >= 0 && left < 80)
+            if (posY < BOARD_HEIGHT) {
+                if (left >= 0 && left < BOARD_WIDTH)
                     board.grid[posY][left] = '*';
-                if (right >= 0 && right < 80 && left != right)
+                if (right >= 0 && right < BOARD_WIDTH && left != right)
                     board.grid[posY][right] = '*';
             }
         }
         for (int j = 0; j < 2 * height - 1; ++j) {
             int baseX = x - height + 1 + j;
             int baseY = y + height - 1;
-            if (baseX >= 0 && baseX < 80 && baseY < 25)
+            if (baseX >= 0 && baseX < BOARD_WIDTH && baseY < BOARD_HEIGHT)
                 board.grid[baseY][baseX] = '*';
         }
     }
@@ -109,6 +119,9 @@ struct Triangle : public Shape {
 int main() {
     Board board;
     std::string command;
+    std::vector<Information> shapes_info;
+    std::vector<Shape*> shapes;
+    int shape_id = 1;
 
     while (true) {
         std::cout << "> ";
@@ -119,36 +132,61 @@ int main() {
         }
         else if (command == "triangle") {
             int x, y, height;
-            std::cout << "Enter the location of the triangle, and its height";
+            std::cout << "Enter the location of the triangle, and its height: ";
             std::cin >> x >> y >> height;
 
-            Triangle triangle(height);
-            triangle.draw(board, x, y);
+            Triangle* triangle = new Triangle(height);
+            triangle->draw(board, x, y);
+            shapes.push_back(triangle);
+            shapes_info.emplace_back(shape_id++, "triangle", x, y, height);
         }
         else if (command == "circle") {
             int x, y, radius;
             std::cout << "Enter the location of the circle, and its radius: ";
             std::cin >> x >> y >> radius;
 
-            Circle circle(radius);
-            circle.draw(board, x, y);
+            Circle* circle = new Circle(radius);
+            circle->draw(board, x, y);
+            shapes.push_back(circle);
+            shapes_info.emplace_back(shape_id++, "circle", x, y, radius);
         }
         else if (command == "square") {
             int x, y, side_length;
             std::cout << "Enter the location of the square, and its side length: ";
             std::cin >> x >> y >> side_length;
 
-            Square square(side_length);
-            square.draw(board, x, y);
+            Square* square = new Square(side_length);
+            square->draw(board, x, y);
+            shapes.push_back(square);
+            shapes_info.emplace_back(shape_id++, "square", x, y, side_length, side_length);
         }
-        else if (command == "list") {
+        else if (command == "shapes") {
             std::cout << "circle coordinates radius\n";
             std::cout << "square coordinates side size\n";
             std::cout << "triangle coordinates height\n";
         }
+        else if (command == "list") {
+            for (const auto& info : shapes_info) {
+                if (info.type == "circle") {
+                    std::cout << "> " << info.id << " " << info.type << " radius: " << info.width << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+                else if (info.type == "square") {
+                    std::cout << "> " << info.id << " " << info.type << " width: " << info.width << " height: " << info.height << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+                else if (info.type == "triangle") {
+                    std::cout << "> " << info.id << " " << info.type << " height: " << info.width << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+            }
+        }
         else if (command == "exit") {
             break;
         }
+    }
+    for (auto& shape : shapes) {
+        delete shape;
     }
 
     return 0;
