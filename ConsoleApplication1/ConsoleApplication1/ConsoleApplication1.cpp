@@ -181,8 +181,13 @@ int main() {
                 }
             }
         }
-        else if (command == "exit") {
-            break;
+        else if (command == "clear") {
+            board.clear();
+            for (auto& shape : shapes) {
+                delete shape;
+            }
+            shapes.clear();
+            shapes_info.clear();
         }
     }
     for (auto& shape : shapes) {
