@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 const int BOARD_WIDTH = 80;
-const int BOARD_HEIGHT = 25;
+const int BOARD_HEIGHT = 80;
 
 struct Board {
     std::vector<std::vector<char>> grid;
@@ -56,6 +57,27 @@ struct Triangle : public Shape {
     }
 };
 
+struct Circle : public Shape {
+    int radius;
+
+    Circle(int r) : radius(r) {}
+
+    void draw(Board& board, int X, int Y) override {
+        if (radius <= 0) return;
+        for (int y = -radius; y <= radius; ++y) {
+            for (int x = -radius; x <= radius; ++x) {
+                if (std::abs(x * x + y * y - radius * radius) <= radius) {
+                    int drawnX = X + x;
+                    int drawnY = Y + y;
+                    if (drawnX >= 0 && drawnX < 80 && drawnY >= 0 && drawnY < 25) {
+                        board.grid[drawnY][drawnX] = '*';
+                    }
+                }
+            }
+        }
+    }
+};
+
 int main() {
     Board board;
     std::string command;
@@ -69,14 +91,19 @@ int main() {
         }
         else if (command == "triangle") {
             int x, y, height;
-            std::cout << "Enter the location of the triangle, and its height";
+            std::cout << "Enter the location of the triangle, and its height: ";
             std::cin >> x >> y >> height;
 
             Triangle triangle(height);
             triangle.draw(board, x, y);
         }
-        else if (command == "clear") {
-            board.clear();
+        else if (command == "circle") {
+            int x, y, radius;
+            std::cout << "Enter the location of the circle, and its radius: ";
+            std::cin >> x >> y >> radius;
+
+            Circle circle(radius);
+            circle.draw(board, x, y);
         }
         else if (command == "exit") {
             break;
