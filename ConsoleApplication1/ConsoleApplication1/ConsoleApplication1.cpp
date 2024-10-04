@@ -78,6 +78,34 @@ struct Square : public Shape {
     }
 };
 
+struct Triangle : public Shape {
+    int height;
+
+    Triangle(int h) : height(h) {}
+
+    void draw(Board& board, int x, int y) override {
+        if (height <= 0) return;
+        for (int i = 0; i < height; ++i) {
+            int left = x - i;
+            int right = x + i;
+            int posY = y + i;
+
+            if (posY < 25) {
+                if (left >= 0 && left < 80)
+                    board.grid[posY][left] = '*';
+                if (right >= 0 && right < 80 && left != right)
+                    board.grid[posY][right] = '*';
+            }
+        }
+        for (int j = 0; j < 2 * height - 1; ++j) {
+            int baseX = x - height + 1 + j;
+            int baseY = y + height - 1;
+            if (baseX >= 0 && baseX < 80 && baseY < 25)
+                board.grid[baseY][baseX] = '*';
+        }
+    }
+};
+
 int main() {
     Board board;
     std::string command;
@@ -88,6 +116,14 @@ int main() {
 
         if (command == "draw") {
             board.print();
+        }
+        else if (command == "triangle") {
+            int x, y, height;
+            std::cout << "Enter the location of the triangle, and its height";
+            std::cin >> x >> y >> height;
+
+            Triangle triangle(height);
+            triangle.draw(board, x, y);
         }
         else if (command == "circle") {
             int x, y, radius;
@@ -104,6 +140,11 @@ int main() {
 
             Square square(side_length);
             square.draw(board, x, y);
+        }
+        else if (command == "list") {
+            std::cout << "circle coordinates radius\n";
+            std::cout << "square coordinates side size\n";
+            std::cout << "triangle coordinates height\n";
         }
         else if (command == "exit") {
             break;
