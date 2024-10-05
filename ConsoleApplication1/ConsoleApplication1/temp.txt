@@ -1,0 +1,2 @@
+1 triangle 10 10 10 0
+2 circle 15 15 10 0

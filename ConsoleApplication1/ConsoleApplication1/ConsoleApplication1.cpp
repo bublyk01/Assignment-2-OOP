@@ -272,6 +272,33 @@ int main() {
                 delete square;
             }
         }
+        else if (command == "undo") {
+            if (!shapes.empty()) {
+                delete shapes.back();
+                shapes.pop_back();
+                shapes_info.pop_back();
+                board.clear();
+                for (const auto& shape : shapes) {
+                    shape->draw(board, shapes_info[&shape - &shapes[0]].x, shapes_info[&shape - &shapes[0]].y);
+                }
+            }
+        }
+        else if (command == "list") {
+            for (const auto& info : shapes_info) {
+                if (info.type == "circle") {
+                    std::cout << "> " << info.id << " " << info.type << " radius: " << info.width << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+                else if (info.type == "square") {
+                    std::cout << "> " << info.id << " " << info.type << " width: " << info.width << " height: " << info.height << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+                else if (info.type == "triangle") {
+                    std::cout << "> " << info.id << " " << info.type << " height: " << info.width << "\n";
+                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
+                }
+            }
+        }
         else if (command == "save") {
             std::string filename;
             std::cout << "Enter the filename: ";
@@ -287,15 +314,17 @@ int main() {
         else if (command == "clear") {
             board.clear();
         }
+        else if (command == "shapes") {
+            std::cout << "circle coordinates radius\n";
+            std::cout << "square coordinates side size\n";
+            std::cout << "triangle coordinates height\n";
+        }
         else if (command == "exit") {
             break;
         }
-        else {
-            std::cout << "Invalid command.\n";
-        }
     }
 
-    for (auto& shape : shapes) {
+    for (auto shape : shapes) {
         delete shape;
     }
 
