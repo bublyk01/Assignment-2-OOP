@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <fstream>
 
 const int BOARD_WIDTH = 80;
 const int BOARD_HEIGHT = 80;
@@ -38,6 +39,8 @@ struct Information {
 struct Shape {
     virtual void draw(Board& board, int x, int y) = 0;
     virtual ~Shape() = default;
+    virtual bool Fits(int x, int y) = 0;
+    virtual bool Duplicate(const Information& info) = 0;
 };
 
 struct Circle : public Shape {
@@ -62,6 +65,14 @@ struct Circle : public Shape {
             }
         }
     }
+
+    bool Fits(int x, int y) override {
+        return x - radius >= 0 && x + radius < BOARD_WIDTH && y - radius / FIGURE_SCALE >= 0 && y + radius / FIGURE_SCALE < BOARD_HEIGHT;
+    }
+
+    bool Duplicate(const Information& info) override {
+        return info.type == "circle" && info.width == radius;
+    }
 };
 
 struct Square : public Shape {
@@ -85,6 +96,14 @@ struct Square : public Shape {
                 }
             }
         }
+    }
+
+    bool Fits(int x, int y) override {
+        return x >= 0 && x + side_length < BOARD_WIDTH && y >= 0 && y + side_length / FIGURE_SCALE < BOARD_HEIGHT;
+    }
+
+    bool Duplicate(const Information& info) override {
+        return info.type == "square" && info.width == side_length;
     }
 };
 
@@ -114,7 +133,85 @@ struct Triangle : public Shape {
                 board.grid[baseY][baseX] = '*';
         }
     }
+
+    bool Fits(int x, int y) override {
+        return x - height >= 0 && x + height < BOARD_WIDTH && y >= 0 && y + height < BOARD_HEIGHT;
+    }
+
+    bool Duplicate(const Information& info) override {
+        return info.type == "triangle" && info.width == height;
+    }
 };
+
+bool PlaceShape(int x, int y, Shape* shape, const std::vector<Information>& shapes_info, const std::string& type, int dim1, int dim2 = 0) {
+    if (!shape->Fits(x, y)) {
+        std::cout << "Shape doesn't fit on the board.\n";
+        return false;
+    }
+
+    for (const auto& info : shapes_info) {
+        if (info.x == x && info.y == y && info.type == type && info.width == dim1 && info.height == dim2) {
+            std::cout << "Shape with the same type and parameters already exists at this location.\n";
+            return false;
+        }
+    }
+    return true;
+}
+
+void saveToFile(const std::string& filename, const std::vector<Information>& shapes_info) {
+    std::ofstream file(filename);
+    if (!file) {
+        std::cerr << "Could not save the file";
+        return;
+    }
+
+    for (const auto& info : shapes_info) {
+        file << info.id << " " << info.type << " " << info.x << " " << info.y << " " << info.width << " " << info.height << "\n";
+    }
+
+    file.close();
+}
+
+void loadFromFile(const std::string& filename, Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info, int& shape_id) {
+    std::ifstream file(filename);
+    if (!file) {
+        std::cerr << "Could not open the file";
+        return;
+    }
+
+    shapes_info.clear();
+    for (auto& shape : shapes) {
+        delete shape;
+    }
+    shapes.clear();
+    board.clear();
+
+    int id, x, y, dim1, dim2;
+    std::string type;
+    while (file >> id >> type >> x >> y >> dim1 >> dim2) {
+        if (type == "circle") {
+            Circle* circle = new Circle(dim1);
+            circle->draw(board, x, y);
+            shapes.push_back(circle);
+            shapes_info.emplace_back(id, type, x, y, dim1);
+        }
+        else if (type == "square") {
+            Square* square = new Square(dim1);
+            square->draw(board, x, y);
+            shapes.push_back(square);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2);
+        }
+        else if (type == "triangle") {
+            Triangle* triangle = new Triangle(dim1);
+            triangle->draw(board, x, y);
+            shapes.push_back(triangle);
+            shapes_info.emplace_back(id, type, x, y, dim1);
+        }
+        shape_id = std::max(shape_id, id + 1);
+    }
+
+    file.close();
+}
 
 int main() {
     Board board;
@@ -136,9 +233,14 @@ int main() {
             std::cin >> x >> y >> height;
 
             Triangle* triangle = new Triangle(height);
-            triangle->draw(board, x, y);
-            shapes.push_back(triangle);
-            shapes_info.emplace_back(shape_id++, "triangle", x, y, height);
+            if (PlaceShape(x, y, triangle, shapes_info, "triangle", height)) {
+                triangle->draw(board, x, y);
+                shapes.push_back(triangle);
+                shapes_info.emplace_back(shape_id++, "triangle", x, y, height);
+            }
+            else {
+                delete triangle;
+            }
         }
         else if (command == "circle") {
             int x, y, radius;
@@ -146,62 +248,53 @@ int main() {
             std::cin >> x >> y >> radius;
 
             Circle* circle = new Circle(radius);
-            circle->draw(board, x, y);
-            shapes.push_back(circle);
-            shapes_info.emplace_back(shape_id++, "circle", x, y, radius);
+            if (PlaceShape(x, y, circle, shapes_info, "circle", radius)) {
+                circle->draw(board, x, y);
+                shapes.push_back(circle);
+                shapes_info.emplace_back(shape_id++, "circle", x, y, radius);
+            }
+            else {
+                delete circle;
+            }
         }
         else if (command == "square") {
-            int x, y, side_length;
+            int x, y, side;
             std::cout << "Enter the location of the square, and its side length: ";
-            std::cin >> x >> y >> side_length;
+            std::cin >> x >> y >> side;
 
-            Square* square = new Square(side_length);
-            square->draw(board, x, y);
-            shapes.push_back(square);
-            shapes_info.emplace_back(shape_id++, "square", x, y, side_length, side_length);
-        }
-        else if (command == "shapes") {
-            std::cout << "circle coordinates radius\n";
-            std::cout << "square coordinates side size\n";
-            std::cout << "triangle coordinates height\n";
-        }
-        else if (command == "list") {
-            for (const auto& info : shapes_info) {
-                if (info.type == "circle") {
-                    std::cout << "> " << info.id << " " << info.type << " radius: " << info.width << "\n";
-                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
-                }
-                else if (info.type == "square") {
-                    std::cout << "> " << info.id << " " << info.type << " width: " << info.width << " height: " << info.height << "\n";
-                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
-                }
-                else if (info.type == "triangle") {
-                    std::cout << "> " << info.id << " " << info.type << " height: " << info.width << "\n";
-                    std::cout << "coordinates: (" << info.x << ", " << info.y << ")\n";
-                }
+            Square* square = new Square(side);
+            if (PlaceShape(x, y, square, shapes_info, "square", side)) {
+                square->draw(board, x, y);
+                shapes.push_back(square);
+                shapes_info.emplace_back(shape_id++, "square", x, y, side);
             }
+            else {
+                delete square;
+            }
+        }
+        else if (command == "save") {
+            std::string filename;
+            std::cout << "Enter the filename: ";
+            std::cin >> filename;
+            saveToFile(filename, shapes_info);
+        }
+        else if (command == "load") {
+            std::string filename;
+            std::cout << "Enter the filename: ";
+            std::cin >> filename;
+            loadFromFile(filename, board, shapes, shapes_info, shape_id);
         }
         else if (command == "clear") {
             board.clear();
-            for (auto& shape : shapes) {
-                delete shape;
-            }
-            shapes.clear();
-            shapes_info.clear();
         }
-        else if (command == "undo") {
-            if (!shapes.empty()) {
-                delete shapes.back();
-                shapes.pop_back();
-                shapes_info.pop_back();
-
-                board.clear();
-                for (const auto& shape : shapes) {
-                    shape->draw(board, shapes_info[&shape - &shapes[0]].x, shapes_info[&shape - &shapes[0]].y);
-                }
-            }
+        else if (command == "exit") {
+            break;
+        }
+        else {
+            std::cout << "Invalid command.\n";
         }
     }
+
     for (auto& shape : shapes) {
         delete shape;
     }
