@@ -37,7 +37,7 @@ struct Information {
 };
 
 struct Shape {
-    virtual void draw(Board& board, int x, int y) = 0;
+    virtual void draw(Board& board, int x, int y, char color) = 0;
     virtual ~Shape() = default;
     virtual bool Fits(int x, int y) = 0;
     virtual bool Duplicate(const Information& info) = 0;
@@ -48,7 +48,7 @@ struct Circle : public Shape {
 
     Circle(int r) : radius(r) {}
 
-    void draw(Board& board, int X, int Y) override {
+    void draw(Board& board, int X, int Y, char color) override {
         if (radius <= 0) return;
 
         for (int y = -radius; y <= radius; ++y) {
@@ -59,7 +59,7 @@ struct Circle : public Shape {
                     int drawnX = X + x;
                     int drawnY = Y + y;
                     if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
-                        board.grid[drawnY][drawnX] = '*';
+                        board.grid[drawnY][drawnX] = color;
                     }
                 }
             }
@@ -80,7 +80,7 @@ struct Square : public Shape {
 
     Square(int side) : side_length(side) {}
 
-    void draw(Board& board, int X, int Y) override {
+    void draw(Board& board, int X, int Y, char color) override {
         if (side_length <= 0) return;
 
         for (int y = 0; y < side_length; ++y) {
@@ -91,7 +91,7 @@ struct Square : public Shape {
                     int drawnX = X + x;
                     int drawnY = Y + static_cast<int>(correctY);
                     if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
-                        board.grid[drawnY][drawnX] = '*';
+                        board.grid[drawnY][drawnX] = color;
                     }
                 }
             }
@@ -112,7 +112,7 @@ struct Triangle : public Shape {
 
     Triangle(int h) : height(h) {}
 
-    void draw(Board& board, int x, int y) override {
+    void draw(Board& board, int x, int y, char color) override {
         if (height <= 0) return;
         for (int i = 0; i < height; ++i) {
             int left = x - i;
@@ -121,16 +121,16 @@ struct Triangle : public Shape {
 
             if (posY < BOARD_HEIGHT) {
                 if (left >= 0 && left < BOARD_WIDTH)
-                    board.grid[posY][left] = '*';
+                    board.grid[posY][left] = color;
                 if (right >= 0 && right < BOARD_WIDTH && left != right)
-                    board.grid[posY][right] = '*';
+                    board.grid[posY][right] = color;
             }
         }
         for (int j = 0; j < 2 * height - 1; ++j) {
             int baseX = x - height + 1 + j;
             int baseY = y + height - 1;
             if (baseX >= 0 && baseX < BOARD_WIDTH && baseY < BOARD_HEIGHT)
-                board.grid[baseY][baseX] = '*';
+                board.grid[baseY][baseX] = color;
         }
     }
 
@@ -191,19 +191,19 @@ void loadFromFile(const std::string& filename, Board& board, std::vector<Shape*>
     while (file >> id >> type >> x >> y >> dim1 >> dim2) {
         if (type == "circle") {
             Circle* circle = new Circle(dim1);
-            circle->draw(board, x, y);
+            circle->draw(board, x, y, 'C');
             shapes.push_back(circle);
             shapes_info.emplace_back(id, type, x, y, dim1);
         }
         else if (type == "square") {
             Square* square = new Square(dim1);
-            square->draw(board, x, y);
+            square->draw(board, x, y, 'S');
             shapes.push_back(square);
             shapes_info.emplace_back(id, type, x, y, dim1, dim2);
         }
         else if (type == "triangle") {
             Triangle* triangle = new Triangle(dim1);
-            triangle->draw(board, x, y);
+            triangle->draw(board, x, y, 'T');
             shapes.push_back(triangle);
             shapes_info.emplace_back(id, type, x, y, dim1);
         }
@@ -211,6 +211,13 @@ void loadFromFile(const std::string& filename, Board& board, std::vector<Shape*>
     }
 
     file.close();
+}
+
+char Color(const std::string& color) {
+    if (color == "red") return 'R';
+    if (color == "blue") return 'B';
+    if (color == "green") return 'G';
+    return '*';
 }
 
 int main() {
@@ -229,12 +236,13 @@ int main() {
         }
         else if (command == "triangle") {
             int x, y, height;
-            std::cout << "Enter the location of the triangle, and its height: ";
-            std::cin >> x >> y >> height;
+            std::string color;
+            std::cout << "Enter the location of the triangle, its height, and its color: ";
+            std::cin >> x >> y >> height >> color;
 
             Triangle* triangle = new Triangle(height);
             if (PlaceShape(x, y, triangle, shapes_info, "triangle", height)) {
-                triangle->draw(board, x, y);
+                triangle->draw(board, x, y, Color(color));
                 shapes.push_back(triangle);
                 shapes_info.emplace_back(shape_id++, "triangle", x, y, height);
             }
@@ -244,12 +252,13 @@ int main() {
         }
         else if (command == "circle") {
             int x, y, radius;
-            std::cout << "Enter the location of the circle, and its radius: ";
-            std::cin >> x >> y >> radius;
+            std::string color;
+            std::cout << "Enter the location of the circle, its radius, and its color: ";
+            std::cin >> x >> y >> radius >> color;
 
             Circle* circle = new Circle(radius);
             if (PlaceShape(x, y, circle, shapes_info, "circle", radius)) {
-                circle->draw(board, x, y);
+                circle->draw(board, x, y, Color(color));
                 shapes.push_back(circle);
                 shapes_info.emplace_back(shape_id++, "circle", x, y, radius);
             }
@@ -258,28 +267,52 @@ int main() {
             }
         }
         else if (command == "square") {
-            int x, y, side;
-            std::cout << "Enter the location of the square, and its side length: ";
-            std::cin >> x >> y >> side;
+            int x, y, side_length;
+            std::string color;
+            std::cout << "Enter the location of the square, its side length, and its color: ";
+            std::cin >> x >> y >> side_length >> color;
 
-            Square* square = new Square(side);
-            if (PlaceShape(x, y, square, shapes_info, "square", side)) {
-                square->draw(board, x, y);
+            Square* square = new Square(side_length);
+            if (PlaceShape(x, y, square, shapes_info, "square", side_length)) {
+                square->draw(board, x, y, Color(color));
                 shapes.push_back(square);
-                shapes_info.emplace_back(shape_id++, "square", x, y, side);
+                shapes_info.emplace_back(shape_id++, "square", x, y, side_length);
             }
             else {
                 delete square;
             }
         }
+        else if (command == "save") {
+            std::string filename;
+            std::cout << "Enter the filename: ";
+            std::cin >> filename;
+            saveToFile(filename, shapes_info);
+        }
+        else if (command == "load") {
+            std::string filename;
+            std::cout << "Enter the filename: ";
+            std::cin >> filename;
+            loadFromFile(filename, board, shapes, shapes_info, shape_id);
+        }
+        else if (command == "clear") {
+            board.clear();
+            for (auto& shape : shapes) {
+                delete shape;
+            }
+            shapes.clear();
+            shapes_info.clear();
+        }
         else if (command == "undo") {
             if (!shapes.empty()) {
+                board.clear();
                 delete shapes.back();
                 shapes.pop_back();
                 shapes_info.pop_back();
-                board.clear();
-                for (const auto& shape : shapes) {
-                    shape->draw(board, shapes_info[&shape - &shapes[0]].x, shapes_info[&shape - &shapes[0]].y);
+
+                for (size_t i = 0; i < shapes.size(); ++i) {
+                    const auto& info = shapes_info[i];
+                    Shape* shape = shapes[i];
+                    shape->draw(board, info.x, info.y, Color("green"));
                 }
             }
         }
@@ -299,21 +332,6 @@ int main() {
                 }
             }
         }
-        else if (command == "save") {
-            std::string filename;
-            std::cout << "Enter the filename: ";
-            std::cin >> filename;
-            saveToFile(filename, shapes_info);
-        }
-        else if (command == "load") {
-            std::string filename;
-            std::cout << "Enter the filename: ";
-            std::cin >> filename;
-            loadFromFile(filename, board, shapes, shapes_info, shape_id);
-        }
-        else if (command == "clear") {
-            board.clear();
-        }
         else if (command == "shapes") {
             std::cout << "circle coordinates radius\n";
             std::cout << "square coordinates side size\n";
@@ -324,7 +342,7 @@ int main() {
         }
     }
 
-    for (auto shape : shapes) {
+    for (auto& shape : shapes) {
         delete shape;
     }
 
