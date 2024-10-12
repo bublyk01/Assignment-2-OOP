@@ -358,6 +358,30 @@ int main() {
             std::cout << "square coordinates side size\n";
             std::cout << "triangle coordinates height\n";
         }
+        else if (command == "select") {
+            int id;
+            std::cout << "Enter ID of the figure you want to check: ";
+            std::cin >> id;
+
+            bool found = false;
+
+            for (const auto& info : shapes_info) {
+                if (info.id == id) {
+                    found = true;
+                    std::cout << info.type << " " << info.x << " " << info.y << " " << info.width<< " ";
+                    if (info.type != "circle") {
+                        std::cout << info.height;
+                    }
+                    std::cout << info.color;
+                    break;
+                }
+            }
+
+            if (!found) {
+                std::cout << "Could not find this figure";
+            }
+            }
+
         else if (command == "exit") {
             break;
         }
