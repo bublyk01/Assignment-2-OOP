@@ -33,7 +33,7 @@ struct Information {
     int width, height;
     char color;
 
-    Information(int id, std::string type, int x, int y, int dim1, int dim2, char color)
+    Information(int id, std::string type, int x, int y, int dim1, int dim2 = 0, char color = '*')
         : id(id), type(type), x(x), y(y), width(dim1), height(dim2), color(color) {}
 };
 
@@ -222,20 +222,6 @@ char Color(const std::string& color) {
     return '*';
 }
 
-void repaintShape(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info, int id, const std::string& color) {
-    board.clear();
-
-    for (size_t i = 0; i < shapes.size(); ++i) {
-        Information& info = shapes_info[i];
-        Shape* shape = shapes[i];
-
-        if (info.id == id) {
-            info.color = Color(color);
-        }
-        shape->draw(board, info.x, info.y, info.color);
-    }
-}
-
 int main() {
     Board board;
     std::string command;
@@ -255,58 +241,77 @@ int main() {
             std::string color;
             std::cout << "Enter the location of the triangle, its height, and its color: ";
             std::cin >> x >> y >> height >> color;
-
-            Triangle* triangle = new Triangle(height);
+            Shape* triangle = new Triangle(height);
             if (PlaceShape(x, y, triangle, shapes_info, "triangle", height)) {
-                triangle->draw(board, x, y, Color(color));
+                char draw_color = Color(color);
+                triangle->draw(board, x, y, draw_color);
                 shapes.push_back(triangle);
-                shapes_info.emplace_back(shape_id++, "triangle", x, y, height);
+                shapes_info.emplace_back(shape_id++, "triangle", x, y, height, 0, draw_color);
             }
-            else {
-                delete triangle;
-            }
+            else delete triangle;
         }
         else if (command == "circle") {
             int x, y, radius;
             std::string color;
             std::cout << "Enter the location of the circle, its radius, and its color: ";
             std::cin >> x >> y >> radius >> color;
-
-            Circle* circle = new Circle(radius);
+            Shape* circle = new Circle(radius);
             if (PlaceShape(x, y, circle, shapes_info, "circle", radius)) {
-                circle->draw(board, x, y, Color(color));
+                char draw_color = Color(color);
+                circle->draw(board, x, y, draw_color);
                 shapes.push_back(circle);
-                shapes_info.emplace_back(shape_id++, "circle", x, y, radius);
+                shapes_info.emplace_back(shape_id++, "circle", x, y, radius, 0, draw_color);
             }
-            else {
-                delete circle;
-            }
+            else delete circle;
         }
         else if (command == "square") {
-            int x, y, side_length;
+            int x, y, side;
             std::string color;
             std::cout << "Enter the location of the square, its side length, and its color: ";
-            std::cin >> x >> y >> side_length >> color;
-
-            Square* square = new Square(side_length);
-            if (PlaceShape(x, y, square, shapes_info, "square", side_length)) {
-                square->draw(board, x, y, Color(color));
+            std::cin >> x >> y >> side >> color;
+            Shape* square = new Square(side);
+            if (PlaceShape(x, y, square, shapes_info, "square", side)) {
+                char draw_color = Color(color);
+                square->draw(board, x, y, draw_color);
                 shapes.push_back(square);
-                shapes_info.emplace_back(shape_id++, "square", x, y, side_length);
+                shapes_info.emplace_back(shape_id++, "square", x, y, side, 0, draw_color);
             }
-            else {
-                delete square;
+            else delete square;
+        }
+        else if (command == "paint") {
+            int id;
+            std::string color;
+            std::cout << "Enter shape's ID and the new color: ";
+            std::cin >> id >> color;
+
+            char new_color = Color(color);
+            bool found = false;
+
+            for (auto& info : shapes_info) {
+                if (info.id == id) {
+                    found = true;
+                    info.color = new_color;
+                    board.clear();
+                    for (size_t i = 0; i < shapes.size(); ++i) {
+                        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+                    }
+                    break;
+                }
+            }
+
+            if (!found) {
+                std::cout << "Shape with ID " << id << " not found.\n";
             }
         }
         else if (command == "save") {
             std::string filename;
-            std::cout << "Enter the filename: ";
+            std::cout << "Enter filename to save: ";
             std::cin >> filename;
             saveToFile(filename, shapes_info);
         }
         else if (command == "load") {
             std::string filename;
-            std::cout << "Enter the filename: ";
+            std::cout << "Enter filename to load: ";
             std::cin >> filename;
             loadFromFile(filename, board, shapes, shapes_info, shape_id);
         }
@@ -352,14 +357,6 @@ int main() {
             std::cout << "circle coordinates radius\n";
             std::cout << "square coordinates side size\n";
             std::cout << "triangle coordinates height\n";
-        }
-        else if (command == "paint") {
-            int id;
-            std::string color;
-            std::cout << "Enter the ID of the shape you want to paint and the new color: ";
-            std::cin >> id >> color;
-
-            repaintShape(board, shapes, shapes_info, id, color);
         }
         else if (command == "exit") {
             break;
