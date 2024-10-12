@@ -31,9 +31,10 @@ struct Information {
     std::string type;
     int x, y;
     int width, height;
+    char color;
 
-    Information(int id, std::string type, int x, int y, int dim1, int dim2 = 0)
-        : id(id), type(type), x(x), y(y), width(dim1), height(dim2) {}
+    Information(int id, std::string type, int x, int y, int dim1, int dim2, char color)
+        : id(id), type(type), x(x), y(y), width(dim1), height(dim2), color(color) {}
 };
 
 struct Shape {
@@ -166,7 +167,7 @@ void saveToFile(const std::string& filename, const std::vector<Information>& sha
     }
 
     for (const auto& info : shapes_info) {
-        file << info.id << " " << info.type << " " << info.x << " " << info.y << " " << info.width << " " << info.height << "\n";
+        file << info.id << " " << info.type << " " << info.x << " " << info.y << " " << info.width << " " << info.height << " " << info.color << "\n";
     }
 
     file.close();
@@ -187,25 +188,26 @@ void loadFromFile(const std::string& filename, Board& board, std::vector<Shape*>
     board.clear();
 
     int id, x, y, dim1, dim2;
+    char color;
     std::string type;
-    while (file >> id >> type >> x >> y >> dim1 >> dim2) {
+    while (file >> id >> type >> x >> y >> dim1 >> dim2 >> color) {
         if (type == "circle") {
             Circle* circle = new Circle(dim1);
-            circle->draw(board, x, y, 'C');
+            circle->draw(board, x, y, color);
             shapes.push_back(circle);
-            shapes_info.emplace_back(id, type, x, y, dim1);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
         }
         else if (type == "square") {
             Square* square = new Square(dim1);
-            square->draw(board, x, y, 'S');
+            square->draw(board, x, y, color);
             shapes.push_back(square);
-            shapes_info.emplace_back(id, type, x, y, dim1, dim2);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
         }
         else if (type == "triangle") {
             Triangle* triangle = new Triangle(dim1);
-            triangle->draw(board, x, y, 'T');
+            triangle->draw(board, x, y, color);
             shapes.push_back(triangle);
-            shapes_info.emplace_back(id, type, x, y, dim1);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
         }
         shape_id = std::max(shape_id, id + 1);
     }
@@ -218,6 +220,20 @@ char Color(const std::string& color) {
     if (color == "blue") return 'B';
     if (color == "green") return 'G';
     return '*';
+}
+
+void repaintShape(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info, int id, const std::string& color) {
+    board.clear();
+
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        Information& info = shapes_info[i];
+        Shape* shape = shapes[i];
+
+        if (info.id == id) {
+            info.color = Color(color);
+        }
+        shape->draw(board, info.x, info.y, info.color);
+    }
 }
 
 int main() {
@@ -336,6 +352,14 @@ int main() {
             std::cout << "circle coordinates radius\n";
             std::cout << "square coordinates side size\n";
             std::cout << "triangle coordinates height\n";
+        }
+        else if (command == "paint") {
+            int id;
+            std::string color;
+            std::cout << "Enter the ID of the shape you want to paint and the new color: ";
+            std::cin >> id >> color;
+
+            repaintShape(board, shapes, shapes_info, id, color);
         }
         else if (command == "exit") {
             break;
