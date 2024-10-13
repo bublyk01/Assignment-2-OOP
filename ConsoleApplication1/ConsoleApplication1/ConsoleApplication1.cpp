@@ -243,12 +243,13 @@ int main() {
             std::cin >> x >> y >> height >> color;
             Shape* triangle = new Triangle(height);
             if (PlaceShape(x, y, triangle, shapes_info, "triangle", height)) {
-                char draw_color = Color(color);
-                triangle->draw(board, x, y, draw_color);
+                triangle->draw(board, x, y, Color(color));
+                shapes_info.emplace_back(shape_id++, "triangle", x, y, height, 0, Color(color));
                 shapes.push_back(triangle);
-                shapes_info.emplace_back(shape_id++, "triangle", x, y, height, 0, draw_color);
             }
-            else delete triangle;
+            else {
+                delete triangle;
+            }
         }
         else if (command == "circle") {
             int x, y, radius;
@@ -257,12 +258,13 @@ int main() {
             std::cin >> x >> y >> radius >> color;
             Shape* circle = new Circle(radius);
             if (PlaceShape(x, y, circle, shapes_info, "circle", radius)) {
-                char draw_color = Color(color);
-                circle->draw(board, x, y, draw_color);
+                circle->draw(board, x, y, Color(color));
+                shapes_info.emplace_back(shape_id++, "circle", x, y, radius, 0, Color(color));
                 shapes.push_back(circle);
-                shapes_info.emplace_back(shape_id++, "circle", x, y, radius, 0, draw_color);
             }
-            else delete circle;
+            else {
+                delete circle;
+            }
         }
         else if (command == "square") {
             int x, y, side;
@@ -271,12 +273,38 @@ int main() {
             std::cin >> x >> y >> side >> color;
             Shape* square = new Square(side);
             if (PlaceShape(x, y, square, shapes_info, "square", side)) {
-                char draw_color = Color(color);
-                square->draw(board, x, y, draw_color);
+                square->draw(board, x, y, Color(color));
+                shapes_info.emplace_back(shape_id++, "square", x, y, side, 0, Color(color));
                 shapes.push_back(square);
-                shapes_info.emplace_back(shape_id++, "square", x, y, side, 0, draw_color);
             }
-            else delete square;
+            else {
+                delete square;
+            }
+        }
+        else if (command == "remove") {
+            int id;
+            std::cout << "Enter the ID of the shape to remove: ";
+            std::cin >> id;
+
+            auto it_info = std::find_if(shapes_info.begin(), shapes_info.end(), [id](const Information& info) {
+                return info.id == id;
+                });
+
+            if (it_info != shapes_info.end()) {
+                int index = std::distance(shapes_info.begin(), it_info);
+                delete shapes[index];
+                shapes.erase(shapes.begin() + index);
+                shapes_info.erase(it_info);
+
+                board.clear();
+                for (size_t i = 0; i < shapes.size(); ++i) {
+                    shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+                }
+                std::cout << "Shape removed.\n";
+            }
+            else {
+                std::cout << "No shape with ID " << id << " found.\n";
+            }
         }
         else if (command == "paint") {
             int id;
@@ -305,13 +333,13 @@ int main() {
         }
         else if (command == "save") {
             std::string filename;
-            std::cout << "Enter filename to save: ";
+            std::cout << "Enter the filename: ";
             std::cin >> filename;
             saveToFile(filename, shapes_info);
         }
         else if (command == "load") {
             std::string filename;
-            std::cout << "Enter filename to load: ";
+            std::cout << "Enter the filename: ";
             std::cin >> filename;
             loadFromFile(filename, board, shapes, shapes_info, shape_id);
         }
@@ -368,7 +396,7 @@ int main() {
             for (const auto& info : shapes_info) {
                 if (info.id == id) {
                     found = true;
-                    std::cout << info.type << " " << info.x << " " << info.y << " " << info.width<< " ";
+                    std::cout << info.type << " " << info.x << " " << info.y << " " << info.width << " ";
                     if (info.type != "circle") {
                         std::cout << info.height;
                     }
@@ -380,14 +408,13 @@ int main() {
             if (!found) {
                 std::cout << "Could not find this figure";
             }
-            }
-
+        }
         else if (command == "exit") {
             break;
         }
     }
 
-    for (auto& shape : shapes) {
+    for (auto shape : shapes) {
         delete shape;
     }
 
