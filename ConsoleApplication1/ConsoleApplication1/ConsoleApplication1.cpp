@@ -219,7 +219,122 @@ char Color(const std::string& color) {
     if (color == "red") return 'R';
     if (color == "blue") return 'B';
     if (color == "green") return 'G';
+    std::cerr << "This color is absent\n";
     return '*';
+}
+
+void Edit(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info) {
+    int id;
+    std::cout << "Enter the ID of the shape you want to edit: ";
+    std::cin >> id;
+
+    auto info_loop = std::find_if(shapes_info.begin(), shapes_info.end(), [id](const Information& info) {
+        return info.id == id;
+        });
+
+    if (info_loop == shapes_info.end()) {
+        std::cout << "This shape was not found";
+        return;
+    }
+
+    Information& info = *info_loop;
+
+    std::cout << "1. Type of the figure: " << info.type << "\n";
+    std::cout << "2. X coordinate: " << info.x << "\n";
+    std::cout << "3. Y coordinate: " << info.y << "\n";
+    std::cout << "4. Width of a figure " << info.width << "\n";
+    if (info.type != "circle") {
+        std::cout << "5. Height of the figure: " << info.height << "\n";
+    }
+    std::cout << "6. Color of the figure: " << info.color << "\n";
+
+    int property;
+    std::cout << "Which property do you want to edit? ";
+    std::cin >> property;
+
+    switch (property) {
+    case 2: {
+        int updatedX;
+        std::cout << "Enter new X coordinate for a figure: ";
+        std::cin >> updatedX;
+
+        if (updatedX >= 0 && updatedX + info.width < BOARD_WIDTH && (info.type != "circle" || info.height == 0)) {
+            info.x = updatedX;
+        }
+        else {
+            std::cout << "Wrong coordinate\n";
+        }
+        break;
+    }
+    case 3: {
+        int updatedY;
+        std::cout << "Enter new Y coordinate for a figure: ";
+        std::cin >> updatedY;
+
+        if (updatedY >= 0 && updatedY + info.height < BOARD_HEIGHT) {
+            info.y = updatedY;
+        }
+        else {
+            std::cout << "Wrong coordinate\n";
+        }
+        break;
+    }
+    case 4: {
+        int updatedDim;
+        std::cout << "Enter new width of a figure: ";
+        std::cin >> updatedDim;
+
+        if (updatedDim > 0) {
+            info.width = updatedDim;
+        }
+        else {
+            std::cout << "Wrong height\n";
+        }
+        break;
+    }
+    case 5: {
+        if (info.type != "circle") {
+            int updatedHeight;
+            std::cout << "Enter new height of a figure ";
+            std::cin >> updatedHeight;
+
+            if (updatedHeight > 0) {
+                info.height = updatedHeight;
+            }
+            else {
+                std::cout << "Invalid Height\n";
+            }
+        }
+        else {
+            std::cout << "Circles don't have height\n";
+        }
+        break;
+    }
+    case 6: {
+        std::string updatedColor;
+        std::cout << "Enter new color (red, blue, green): ";
+        std::cin >> updatedColor;
+
+        char newCharColor = Color(updatedColor);
+        if (newCharColor != '*') {
+            info.color = newCharColor;
+        }
+        else {
+            std::cout << "Unsupported color\n";
+        }
+        break;
+    }
+    default:
+        std::cout << "You did not choose a correct property\n";
+        return;
+    }
+
+    board.clear();
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+    }
+
+    std::cout << "This shape was updated";
 }
 
 int main() {
@@ -408,6 +523,9 @@ int main() {
             if (!found) {
                 std::cout << "Could not find this figure";
             }
+        }
+        else if (command == "edit") {
+            Edit(board, shapes, shapes_info);
         }
         else if (command == "exit") {
             break;
