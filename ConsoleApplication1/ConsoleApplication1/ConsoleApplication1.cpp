@@ -337,6 +337,60 @@ void Edit(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& s
     std::cout << "This shape was updated";
 }
 
+void Move(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info) {
+    int id, updatedX, updatedY;
+    std::cout << "Enter the ID of the shape you want to move: ";
+    std::cin >> id;
+
+    auto it_info = std::find_if(shapes_info.begin(), shapes_info.end(), [id](const Information& info) {
+        return info.id == id;
+        });
+
+    if (it_info == shapes_info.end()) {
+        std::cout << "This shape was not found \n";
+        return;
+    }
+
+    Information& info = *it_info;
+
+    std::cout << "Enter new coordinates for the shape: ";
+    std::cin >> updatedX >> updatedY;
+
+    bool canMove = false;
+    if (info.type == "circle") {
+        Circle temp_circle(info.width);
+        canMove = temp_circle.Fits(updatedX, updatedY);
+    }
+    else if (info.type == "square") {
+        Square temp_square(info.width);
+        canMove = temp_square.Fits(updatedX, updatedY);
+    }
+    else if (info.type == "triangle") {
+        Triangle temp_triangle(info.width);
+        canMove = temp_triangle.Fits(updatedX, updatedY);
+    }
+
+    if (!canMove) {
+        std::cout << "You cannot place this shape outside of the board \n";
+        return;
+    }
+
+    for (const auto& other_info : shapes_info) {
+        if (other_info.id != id && other_info.x == updatedX && other_info.y == updatedY) {
+            std::cout << "Another shape is already placed here \n";
+            return;
+        }
+    }
+
+    info.x = updatedX;
+    info.y = updatedY;
+
+    board.clear();
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+    }
+}
+
 int main() {
     Board board;
     std::string command;
@@ -526,6 +580,9 @@ int main() {
         }
         else if (command == "edit") {
             Edit(board, shapes, shapes_info);
+        }
+        else if (command == "move") {
+            Move(board, shapes, shapes_info);
         }
         else if (command == "exit") {
             break;
