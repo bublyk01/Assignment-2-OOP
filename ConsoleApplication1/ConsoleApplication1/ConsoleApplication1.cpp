@@ -31,14 +31,15 @@ struct Information {
     std::string type;
     int x, y;
     int width, height;
-    char color;
+    char outline;
+    char fill;
 
-    Information(int id, std::string type, int x, int y, int dim1, int dim2 = 0, char color = '*')
-        : id(id), type(type), x(x), y(y), width(dim1), height(dim2), color(color) {}
+    Information(int id, std::string type, int x, int y, int dim1, int dim2 = 0, char outline = '*', char fill = ' ')
+        : id(id), type(type), x(x), y(y), width(dim1), height(dim2), outline(outline), fill(fill) {}
 };
 
 struct Shape {
-    virtual void draw(Board& board, int x, int y, char color) = 0;
+    virtual void draw(Board& board, int x, int y, char outlineColor, char fillColor, bool fillInside = false) = 0;
     virtual ~Shape() = default;
     virtual bool Fits(int x, int y) = 0;
     virtual bool Duplicate(const Information& info) = 0;
@@ -49,7 +50,7 @@ struct Circle : public Shape {
 
     Circle(int r) : radius(r) {}
 
-    void draw(Board& board, int X, int Y, char color) override {
+    void draw(Board& board, int X, int Y, char outline, char fill, bool fillInside = false) override {
         if (radius <= 0) return;
 
         for (int y = -radius; y <= radius; ++y) {
@@ -60,7 +61,14 @@ struct Circle : public Shape {
                     int drawnX = X + x;
                     int drawnY = Y + y;
                     if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
-                        board.grid[drawnY][drawnX] = color;
+                        board.grid[drawnY][drawnX] = outline;
+                    }
+                }
+                else if (fillInside && distance < radius) {
+                    int drawnX = X + x;
+                    int drawnY = Y + y;
+                    if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
+                        board.grid[drawnY][drawnX] = fill;
                     }
                 }
             }
@@ -81,18 +89,23 @@ struct Square : public Shape {
 
     Square(int side) : side_length(side) {}
 
-    void draw(Board& board, int X, int Y, char color) override {
+    void draw(Board& board, int X, int Y, char outline, char fill, bool fillInside = false) override {
         if (side_length <= 0) return;
 
         for (int y = 0; y < side_length; ++y) {
             float correctY = y / FIGURE_SCALE;
 
             for (int x = 0; x < side_length; ++x) {
-                if (y == 0 || y == side_length - 1 || x == 0 || x == side_length - 1) {
+                if (fillInside || y == 0 || y == side_length - 1 || x == 0 || x == side_length - 1) {
                     int drawnX = X + x;
                     int drawnY = Y + static_cast<int>(correctY);
                     if (drawnX >= 0 && drawnX < BOARD_WIDTH && drawnY >= 0 && drawnY < BOARD_HEIGHT) {
-                        board.grid[drawnY][drawnX] = color;
+                        if (fillInside && y > 0 && y < side_length - 1 && x > 0 && x < side_length - 1) {
+                            board.grid[drawnY][drawnX] = fill;
+                        }
+                        else {
+                            board.grid[drawnY][drawnX] = outline;
+                        }
                     }
                 }
             }
@@ -113,7 +126,7 @@ struct Triangle : public Shape {
 
     Triangle(int h) : height(h) {}
 
-    void draw(Board& board, int x, int y, char color) override {
+    void draw(Board& board, int x, int y, char outline, char fill, bool fillInside = false) override {
         if (height <= 0) return;
         for (int i = 0; i < height; ++i) {
             int left = x - i;
@@ -121,17 +134,26 @@ struct Triangle : public Shape {
             int posY = y + i;
 
             if (posY < BOARD_HEIGHT) {
-                if (left >= 0 && left < BOARD_WIDTH)
-                    board.grid[posY][left] = color;
-                if (right >= 0 && right < BOARD_WIDTH && left != right)
-                    board.grid[posY][right] = color;
+                if (fillInside) {
+                    for (int fillX = left; fillX <= right; ++fillX) {
+                        if (fillX >= 0 && fillX < BOARD_WIDTH)
+                            board.grid[posY][fillX] = fill;
+                    }
+                }
+                else {
+                    if (left >= 0 && left < BOARD_WIDTH)
+                        board.grid[posY][left] = outline;
+                    if (right >= 0 && right < BOARD_WIDTH && left != right)
+                        board.grid[posY][right] = outline;
+                }
             }
         }
+
         for (int j = 0; j < 2 * height - 1; ++j) {
             int baseX = x - height + 1 + j;
             int baseY = y + height - 1;
             if (baseX >= 0 && baseX < BOARD_WIDTH && baseY < BOARD_HEIGHT)
-                board.grid[baseY][baseX] = color;
+                board.grid[baseY][baseX] = outline;
         }
     }
 
@@ -149,13 +171,13 @@ struct Line : public Shape {
 
     Line(int len) : length(len) {}
 
-    void draw(Board& board, int X, int Y, char color) override {
+    void draw(Board& board, int X, int Y, char outline, char fill, bool fillInside = false) override {
         if (length <= 0) return;
 
         for (int x = 0; x < length; ++x) {
             int drawnX = X + x;
             if (drawnX >= 0 && drawnX < BOARD_WIDTH && Y >= 0 && Y < BOARD_HEIGHT) {
-                board.grid[Y][drawnX] = color;
+                board.grid[Y][drawnX] = outline;
             }
         }
     }
@@ -192,7 +214,9 @@ void saveToFile(const std::string& filename, const std::vector<Information>& sha
     }
 
     for (const auto& info : shapes_info) {
-        file << info.id << " " << info.type << " " << info.x << " " << info.y << " " << info.width << " " << info.height << " " << info.color << "\n";
+        file << info.id << " " << info.type << " " << info.x << " " << info.y << " "
+            << info.width << " " << info.height << " "
+            << info.outline << " " << info.fill << "\n";
     }
 
     file.close();
@@ -213,26 +237,27 @@ void loadFromFile(const std::string& filename, Board& board, std::vector<Shape*>
     board.clear();
 
     int id, x, y, dim1, dim2;
-    char color;
+    char outline, fill;
     std::string type;
-    while (file >> id >> type >> x >> y >> dim1 >> dim2 >> color) {
+
+    while (file >> id >> type >> x >> y >> dim1 >> dim2 >> outline >> fill) {
         if (type == "circle") {
             Circle* circle = new Circle(dim1);
-            circle->draw(board, x, y, color);
+            circle->draw(board, x, y, outline, fill, true);
             shapes.push_back(circle);
-            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, outline, fill);
         }
         else if (type == "square") {
             Square* square = new Square(dim1);
-            square->draw(board, x, y, color);
+            square->draw(board, x, y, outline, fill, true);
             shapes.push_back(square);
-            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, outline, fill);
         }
         else if (type == "triangle") {
             Triangle* triangle = new Triangle(dim1);
-            triangle->draw(board, x, y, color);
+            triangle->draw(board, x, y, outline, fill, true);
             shapes.push_back(triangle);
-            shapes_info.emplace_back(id, type, x, y, dim1, dim2, color);
+            shapes_info.emplace_back(id, type, x, y, dim1, dim2, outline, fill);
         }
         shape_id = std::max(shape_id, id + 1);
     }
@@ -271,7 +296,8 @@ void Edit(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& s
     if (info.type != "circle") {
         std::cout << "5. Height of the figure: " << info.height << "\n";
     }
-    std::cout << "6. Color of the figure: " << info.color << "\n";
+    std::cout << "6. Outline of the figure: " << info.outline << "\n";
+    std::cout << "7. Fill of the figure: " << info.fill << "\n";
 
     int property;
     std::cout << "Which property do you want to edit? ";
@@ -336,16 +362,30 @@ void Edit(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& s
         break;
     }
     case 6: {
-        std::string updatedColor;
-        std::cout << "Enter new color (red, blue, green): ";
-        std::cin >> updatedColor;
+        std::string updatedOutlineColor;
+        std::cout << "Enter a new outline color (red, green, blue): ";
+        std::cin >> updatedOutlineColor;
 
-        char newCharColor = Color(updatedColor);
-        if (newCharColor != '*') {
-            info.color = newCharColor;
+        char newOutlineCharColor = Color(updatedOutlineColor);
+        if (newOutlineCharColor != '*') {
+            info.outline = newOutlineCharColor;
         }
         else {
-            std::cout << "Unsupported color\n";
+            std::cout << "Unsupported outline color\n";
+        }
+        break;
+    }
+    case 7: {
+        std::string updatedFillColor;
+        std::cout << "Enter a new fill color (red, green, blue): ";
+        std::cin >> updatedFillColor;
+
+        char newFillCharColor = Color(updatedFillColor);
+        if (newFillCharColor != '*') {
+            info.fill = newFillCharColor;
+        }
+        else {
+            std::cout << "You cannot use this fill color\n";
         }
         break;
     }
@@ -356,10 +396,10 @@ void Edit(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& s
 
     board.clear();
     for (size_t i = 0; i < shapes.size(); ++i) {
-        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].outline, shapes_info[i].fill);
     }
 
-    std::cout << "This shape was updated";
+    std::cout << "This shape was updated\n";
 }
 
 void Move(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& shapes_info) {
@@ -412,19 +452,20 @@ void Move(Board& board, std::vector<Shape*>& shapes, std::vector<Information>& s
 
     board.clear();
     for (size_t i = 0; i < shapes.size(); ++i) {
-        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].outline, shapes_info[i].fill);
     }
 }
 
+
 int main() {
     Board board;
-    std::string command;
     std::vector<Information> shapes_info;
     std::vector<Shape*> shapes;
     int shape_id = 1;
 
+    std::string command;
     while (true) {
-        std::cout << "> ";
+        std::cout << "Enter a shape (circle, square, triangle, line), 'clear', or 'exit': ";
         std::cin >> command;
 
         if (command == "draw") {
@@ -432,28 +473,32 @@ int main() {
         }
         else if (command == "triangle") {
             int x, y, height;
-            std::string color;
-            std::cout << "Enter the location of the triangle, its height, and its color: ";
-            std::cin >> x >> y >> height >> color;
+            std::string outlineColor, fillColor, fillInput;
+            bool fill;
+            std::cout << "Enter the location of the triangle, its height, outline color, fill color, and if it should be filled (yes or no): ";
+            std::cin >> x >> y >> height >> outlineColor >> fillColor >> fillInput;
+            fill = (fillInput == "yes");
             Shape* triangle = new Triangle(height);
             if (PlaceShape(x, y, triangle, shapes_info, "triangle", height)) {
-                triangle->draw(board, x, y, Color(color));
-                shapes_info.emplace_back(shape_id++, "triangle", x, y, height, 0, Color(color));
+                triangle->draw(board, x, y, Color(outlineColor), Color(fillColor), fill);
+                shapes_info.emplace_back(shape_id++, "triangle", x, y, height, 0, Color(outlineColor), Color(fillColor));
                 shapes.push_back(triangle);
             }
             else {
                 delete triangle;
             }
         }
-        else if (command == "circle") {
+        if (command == "circle") {
             int x, y, radius;
-            std::string color;
-            std::cout << "Enter the location of the circle, its radius, and its color: ";
-            std::cin >> x >> y >> radius >> color;
+            std::string outlineColor, fillColor, fillInput;
+            bool fill;
+            std::cout << "Enter the location of the circle, its radius, outline color, fill color, and if it should be filled (yes or no): ";
+            std::cin >> x >> y >> radius >> outlineColor >> fillColor >> fillInput;
+            fill = (fillInput == "yes");
             Shape* circle = new Circle(radius);
             if (PlaceShape(x, y, circle, shapes_info, "circle", radius)) {
-                circle->draw(board, x, y, Color(color));
-                shapes_info.emplace_back(shape_id++, "circle", x, y, radius, 0, Color(color));
+                circle->draw(board, x, y, Color(outlineColor), Color(fillColor), fill);
+                shapes_info.emplace_back(shape_id++, "circle", x, y, radius, 0, Color(outlineColor), Color(fillColor));
                 shapes.push_back(circle);
             }
             else {
@@ -462,13 +507,15 @@ int main() {
         }
         else if (command == "square") {
             int x, y, side;
-            std::string color;
-            std::cout << "Enter the location of the square, its side length, and its color: ";
-            std::cin >> x >> y >> side >> color;
+            std::string outlineColor, fillColor, fillInput;
+            bool fill;
+            std::cout << "Enter the location of the square, its side length, outline color, fill color, and if it should be filled (yes or no): ";
+            std::cin >> x >> y >> side >> outlineColor >> fillColor >> fillInput;
+            fill = (fillInput == "yes");
             Shape* square = new Square(side);
             if (PlaceShape(x, y, square, shapes_info, "square", side)) {
-                square->draw(board, x, y, Color(color));
-                shapes_info.emplace_back(shape_id++, "square", x, y, side, 0, Color(color));
+                square->draw(board, x, y, Color(outlineColor), Color(fillColor), fill);
+                shapes_info.emplace_back(shape_id++, "square", x, y, side, 0, Color(outlineColor), Color(fillColor));
                 shapes.push_back(square);
             }
             else {
@@ -477,13 +524,13 @@ int main() {
         }
         else if (command == "line") {
             int x, y, length;
-            std::string color;
+            std::string outlineColor;
             std::cout << "Enter the location of the line, its length, and its color: ";
-            std::cin >> x >> y >> length >> color;
+            std::cin >> x >> y >> length >> outlineColor;
             Shape* line = new Line(length);
             if (PlaceShape(x, y, line, shapes_info, "line", length)) {
-                line->draw(board, x, y, Color(color));
-                shapes_info.emplace_back(shape_id++, "line", x, y, length, 0, Color(color));
+                line->draw(board, x, y, Color(outlineColor), '*');
+                shapes_info.emplace_back(shape_id++, "line", x, y, length, 0, Color(outlineColor));
                 shapes.push_back(line);
             }
             else {
@@ -507,7 +554,7 @@ int main() {
 
                 board.clear();
                 for (size_t i = 0; i < shapes.size(); ++i) {
-                    shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+                    shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].outline, shapes_info[i].fill);
                 }
                 std::cout << "Shape removed.\n";
             }
@@ -517,20 +564,22 @@ int main() {
         }
         else if (command == "paint") {
             int id;
-            std::string color;
-            std::cout << "Enter shape's ID and the new color: ";
-            std::cin >> id >> color;
+            std::string color, fillColor;
+            std::cout << "Enter shape's ID, outline color, and fill color: ";
+            std::cin >> id >> color >> fillColor;
 
-            char new_color = Color(color);
+            char new_outline_color = Color(color);
+            char new_fill_color = Color(fillColor);
             bool found = false;
 
             for (auto& info : shapes_info) {
                 if (info.id == id) {
                     found = true;
-                    info.color = new_color;
+                    info.outline = new_outline_color;
+                    info.fill = new_fill_color;
                     board.clear();
                     for (size_t i = 0; i < shapes.size(); ++i) {
-                        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].color);
+                        shapes[i]->draw(board, shapes_info[i].x, shapes_info[i].y, shapes_info[i].outline, shapes_info[i].fill);
                     }
                     break;
                 }
@@ -554,11 +603,14 @@ int main() {
         }
         else if (command == "clear") {
             board.clear();
-            for (auto& shape : shapes) {
+            shapes_info.clear();
+            for (auto shape : shapes) {
                 delete shape;
             }
             shapes.clear();
-            shapes_info.clear();
+        }
+        else if (command == "exit") {
+            break;
         }
         else if (command == "undo") {
             if (!shapes.empty()) {
@@ -570,7 +622,7 @@ int main() {
                 for (size_t i = 0; i < shapes.size(); ++i) {
                     const auto& info = shapes_info[i];
                     Shape* shape = shapes[i];
-                    shape->draw(board, info.x, info.y, Color("green"));
+                    shape->draw(board, info.x, info.y, info.outline, info.fill);
                 }
             }
         }
@@ -607,9 +659,9 @@ int main() {
                     found = true;
                     std::cout << info.type << " " << info.x << " " << info.y << " " << info.width << " ";
                     if (info.type != "circle") {
-                        std::cout << info.height;
+                        std::cout << info.height << " ";
                     }
-                    std::cout << info.color;
+                    std::cout << "Outline Color: " << info.outline << ", Fill Color: " << info.fill;
                     break;
                 }
             }
@@ -623,9 +675,6 @@ int main() {
         }
         else if (command == "move") {
             Move(board, shapes, shapes_info);
-        }
-        else if (command == "exit") {
-            break;
         }
     }
 
