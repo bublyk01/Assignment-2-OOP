@@ -144,6 +144,31 @@ struct Triangle : public Shape {
     }
 };
 
+struct Line : public Shape {
+    int length;
+
+    Line(int len) : length(len) {}
+
+    void draw(Board& board, int X, int Y, char color) override {
+        if (length <= 0) return;
+
+        for (int x = 0; x < length; ++x) {
+            int drawnX = X + x;
+            if (drawnX >= 0 && drawnX < BOARD_WIDTH && Y >= 0 && Y < BOARD_HEIGHT) {
+                board.grid[Y][drawnX] = color;
+            }
+        }
+    }
+
+    bool Fits(int x, int y) override {
+        return x >= 0 && x + length < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT;
+    }
+
+    bool Duplicate(const Information& info) override {
+        return info.type == "line" && info.width == length;
+    }
+};
+
 bool PlaceShape(int x, int y, Shape* shape, const std::vector<Information>& shapes_info, const std::string& type, int dim1, int dim2 = 0) {
     if (!shape->Fits(x, y)) {
         std::cout << "Shape doesn't fit on the board.\n";
@@ -448,6 +473,21 @@ int main() {
             }
             else {
                 delete square;
+            }
+        }
+        else if (command == "line") {
+            int x, y, length;
+            std::string color;
+            std::cout << "Enter the location of the line, its length, and its color: ";
+            std::cin >> x >> y >> length >> color;
+            Shape* line = new Line(length);
+            if (PlaceShape(x, y, line, shapes_info, "line", length)) {
+                line->draw(board, x, y, Color(color));
+                shapes_info.emplace_back(shape_id++, "line", x, y, length, 0, Color(color));
+                shapes.push_back(line);
+            }
+            else {
+                delete line;
             }
         }
         else if (command == "remove") {
